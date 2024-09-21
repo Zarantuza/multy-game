@@ -12,59 +12,73 @@ export class Network {
     initializePeer() {
         console.log('Initializing peer connection...');
         
-        // Use default PeerJS cloud server
-        this.peer = new Peer(undefined, {
-            debug: 2 // Set debug level (0-3)
-        });
-    
+        const peerOptions = {
+            debug: 2, // Set debug level (0-3)
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'turn:0.peerjs.com:3478', username: 'peerjs', credential: 'peerjsp' }
+                ]
+            }
+        };
+
+        this.peer = new Peer(peerOptions);
+
         this.peer.on('open', (id) => {
             console.log('Peer connection opened. My peer ID is: ' + id);
             document.getElementById('myPeerIdDisplay').textContent = `My Peer ID: ${id}`;
             this.id = id;
             this.game.setNetworkId(id);
         });
-    
+
         this.peer.on('connection', (conn) => {
             console.log('Incoming connection from peer: ' + conn.peer);
             this.handleConnection(conn);
         });
-    
+
         this.peer.on('disconnected', () => {
             console.log('Peer disconnected. Attempting to reconnect...');
             this.peer.reconnect();
         });
-    
+
         this.peer.on('close', () => {
             console.log('Peer connection closed. Cleaning up...');
             this.connections.clear();
             this.game.removeAllPlayers();
         });
-    
+
         this.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
             this.handleNetworkError(err);
-            if (err.type === 'network' || err.type === 'server-error') {
+            if (err.type === 'network' || err.type === 'server-error' || err.type === 'unavailable-id') {
                 console.log('Network or server error. Retrying connection...');
                 this.retryConnection();
             } else if (err.type === 'browser-incompatible') {
                 console.error('Your browser is not compatible with PeerJS');
                 alert('Your browser is not compatible with PeerJS. Please try a different browser.');
+            } else {
+                console.error('Unhandled PeerJS error:', err);
+                alert('An error occurred with the peer connection. Please try refreshing the page.');
             }
         });
     }
 
     retryConnection() {
-        console.log('Retrying connection...');
+        console.log('Retrying connection in 5 seconds...');
         setTimeout(() => {
+            console.log('Retrying connection now...');
             this.initializePeer();
-        }, 5000); // Retry after 5 seconds
+        }, 5000);
     }
 
     connect(peerId) {
         if (!this.connections.has(peerId)) {
+            console.log(`Attempting to connect to peer: ${peerId}`);
             const conn = this.peer.connect(peerId);
             this.isHost = false; // We're connecting to someone, so we're not the host
             this.handleConnection(conn);
+        } else {
+            console.log(`Already connected to peer: ${peerId}`);
         }
     }
 
@@ -75,12 +89,13 @@ export class Network {
             this.game.addRemotePlayer(conn.peer);
 
             if (this.isHost) {
-                // If we're the host, send our game state to the new player
+                console.log('Sending initial game state to new player');
                 const gameState = this.game.getGameState();
                 conn.send({ type: 'initial_state', state: gameState });
             }
 
             conn.on('data', (data) => {
+                console.log(`Received data from ${conn.peer}:`, data);
                 switch (data.type) {
                     case 'move':
                         this.game.handleRemoteMove(conn.peer, data.move);
@@ -90,7 +105,7 @@ export class Network {
                         break;
                     case 'initial_state':
                         if (!this.isHost) {
-                            // Only update our game state if we're not the host
+                            console.log('Received initial game state');
                             this.game.setGameState(data.state);
                         }
                         break;
@@ -129,8 +144,9 @@ export class Network {
     }
 
     broadcast(data) {
+        console.log('Broadcasting data:', data);
         for (let conn of this.connections.values()) {
-            conn.send(data);  // Broadcast data to all connected peers
+            conn.send(data);
         }
     }
 
@@ -145,14 +161,18 @@ export class Network {
     disconnect(peerId) {
         const conn = this.connections.get(peerId);
         if (conn) {
+            console.log(`Disconnecting from peer: ${peerId}`);
             conn.close();
             this.connections.delete(peerId);
             this.game.removePlayer(peerId);
             this.updateConnectionStatus();
+        } else {
+            console.log(`No connection found for peer: ${peerId}`);
         }
     }
 
     disconnectAll() {
+        console.log('Disconnecting from all peers');
         for (let conn of this.connections.values()) {
             conn.close();
         }
@@ -162,6 +182,7 @@ export class Network {
     }
 
     reconnect(peerId) {
+        console.log(`Attempting to reconnect to peer: ${peerId}`);
         this.disconnect(peerId);
         this.connect(peerId);
     }
@@ -169,6 +190,7 @@ export class Network {
     sendDirectMessage(peerId, message) {
         const conn = this.connections.get(peerId);
         if (conn) {
+            console.log(`Sending direct message to ${peerId}: ${message}`);
             conn.send({ type: 'direct_message', message: message });
         } else {
             console.warn(`No connection found for peer ${peerId}`);
@@ -187,7 +209,7 @@ export class Network {
         console.error('Network error:', error);
         const errorElement = document.getElementById('networkError');
         if (errorElement) {
-            errorElement.textContent = `Network error: ${error.type}`;
+            errorElement.textContent = `Network error: ${error.type}. Please try refreshing the page.`;
             errorElement.style.display = 'block';
         }
     }
