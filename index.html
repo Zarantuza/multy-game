@@ -271,6 +271,32 @@
     margin: 5px 0;
     color: #333;
 }
+    
+        #buttonContainer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+    
+        #buttonContainer button {
+    padding: 10px 20px;
+    font-family: 'Fredoka One', cursive;
+    background-color: #FF6B6B;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+    
+        #buttonContainer button:hover {
+    background-color: #ff8e8e;
+    transform: translateY(-2px);
+}
+
 
     </style>
     
@@ -280,11 +306,11 @@
     
     
     
-  <script type="module" crossorigin src="/multy-game/assets/main-3d2f0303.js"></script>
+  <script type="module" crossorigin src="/multy-game/assets/main-77b6d88f.js"></script>
 </head>
 <body>
     <div id="gameContainer">
-        <h1>Spzoku</h1>
+        <h1>Spedoku</h1>
         <div id="gameInfo">
             <div id="players"></div>
             <div id="chronometer">00:00</div>

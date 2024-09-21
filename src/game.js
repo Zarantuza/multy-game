@@ -122,12 +122,21 @@ export class Game {
     }
 
     addEventListeners() {
-        document.addEventListener('keydown', this.handleKeyPress.bind(this));
-        document.getElementById('gameBoard').addEventListener('click', this.handleCellClick.bind(this));
+        if (!this.listenersAdded) {
+            document.addEventListener('keydown', this.handleKeyPress.bind(this));
+            document.getElementById('gameBoard').addEventListener('click', this.handleCellClick.bind(this));
+            this.listenersAdded = true; // Prevents duplicate listeners
+        }
     }
+    
+    
 
     handleKeyPress(event) {
+        event.stopPropagation();  // Prevents event bubbling up
+        
         const key = event.key.toLowerCase();
+        console.log(`Key pressed: ${key}`);  // Log the key press for debugging
+    
         switch (key) {
             case 'arrowup':
             case 'z':
@@ -165,6 +174,8 @@ export class Game {
             event.preventDefault();
         }
     }
+    
+    
 
     handleCellClick(event) {
         const cell = event.target.closest('.cell');
@@ -177,16 +188,23 @@ export class Game {
     }
 
     moveSelection(dx, dy) {
+        console.log("Moving selection");
+    
         const newRow = Math.max(0, Math.min(8, this.selectedCell.row + dy));
         const newCol = Math.max(0, Math.min(8, this.selectedCell.col + dx));
         
-        // Only update if the position has actually changed
         if (newRow !== this.selectedCell.row || newCol !== this.selectedCell.col) {
             this.selectedCell = { row: newRow, col: newCol };
             this.updateSelectedCell();
-            this.network.broadcastPosition(this.selectedCell);
+    
+            // Only broadcast position if this is a local player action
+            if (this.localPlayer) {
+                console.log("Broadcasting position");
+                this.network.broadcastPosition(this.selectedCell);
+            }
         }
     }
+    
 
     updateSelectedCell() {
         document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('selected'));
@@ -439,6 +457,12 @@ export class Game {
     }
 
     handleRemoteMove(id, move) {
+        // Check if the move is from the local player and ignore if true
+        if (id === this.localPlayer.id) {
+            console.log("Ignoring move from local player to prevent double processing.");
+            return;
+        }
+    
         const player = this.players.get(id);
         if (player && this.solution[move.row][move.col] === move.value) {
             // Check if the cell is already solved
@@ -446,15 +470,15 @@ export class Game {
                 console.log("This cell is already solved");
                 return;
             }
-
+    
             this.board[move.row][move.col] = move.value;
             this.cellColors[move.row][move.col] = player.color;
-
+    
             if (!player.solvedCells) {
                 player.solvedCells = [];
             }
             player.solvedCells.push({ row: move.row, col: move.col });
-
+    
             const cell = document.querySelector(`.cell[data-row="${move.row}"][data-col="${move.col}"]`);
             cell.textContent = move.value;
             cell.style.color = player.color;
@@ -463,10 +487,11 @@ export class Game {
             player.addPoints(move.points);
             this.renderBoard(); // Re-render the board to update colors
         }
-
+    
         this.updatePlayersDisplay();
         this.checkGameEnd();
     }
+    
 
     updatePlayerPosition(id, position) {
         const playerMarker = document.getElementById(`player-marker-${id}`);

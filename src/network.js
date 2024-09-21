@@ -87,15 +87,22 @@ export class Network {
             console.log('Connected to: ' + conn.peer);
             this.connections.set(conn.peer, conn);
             this.game.addRemotePlayer(conn.peer);
-
+    
             if (this.isHost) {
                 console.log('Sending initial game state to new player');
                 const gameState = this.game.getGameState();
                 conn.send({ type: 'initial_state', state: gameState });
             }
-
+    
             conn.on('data', (data) => {
                 console.log(`Received data from ${conn.peer}:`, data);
+            
+                // Ignore data from the local player
+                if (conn.peer === this.id) {
+                    console.log('Ignoring data from local peer to prevent double processing');
+                    return;
+                }
+            
                 switch (data.type) {
                     case 'move':
                         this.game.handleRemoteMove(conn.peer, data.move);
@@ -116,32 +123,34 @@ export class Network {
                         console.warn('Unknown data type received:', data.type);
                 }
             });
-
+            
+            
+    
             this.updateConnectionStatus();
         });
-
-        conn.on('close', () => {
-            console.log('Disconnected from: ' + conn.peer);
-            this.connections.delete(conn.peer);
-            this.game.removePlayer(conn.peer);
-            this.updateConnectionStatus();
-        });
-
-        conn.on('error', (err) => {
-            console.error('Connection error:', err);
-            this.handleNetworkError(err);
-        });
     }
-
-    broadcastMove(move) {
-        const data = { type: 'move', move: move };
-        this.broadcast(data);
-    }
+    
 
     broadcastPosition(position) {
         const data = { type: 'position', position: position };
-        this.broadcast(data);
+        console.log('Broadcasting position:', data);
+    
+        // Prevent broadcasting position to self
+        if (this.id !== this.game.localPlayer.id) {
+            this.broadcast(data);
+        }
     }
+    
+    broadcastMove(move) {
+        const data = { type: 'move', move: move };
+    
+        // Prevent broadcasting move to self
+        if (this.id !== this.game.localPlayer.id) {
+            this.broadcast(data);
+        }
+    }
+    
+    
 
     broadcast(data) {
         console.log('Broadcasting data:', data);
@@ -213,4 +222,5 @@ export class Network {
             errorElement.style.display = 'block';
         }
     }
+    
 }

@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (peerId) {
             network.connect(peerId);
         }
-    }); 
+    });
 
     peerIdInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = copyPeerIdButton.textContent;
             copyPeerIdButton.textContent = 'Copied!';
             copyPeerIdButton.style.backgroundColor = '#45b7a4';
-            
+
             setTimeout(() => {
                 copyPeerIdButton.textContent = originalText;
                 copyPeerIdButton.style.backgroundColor = '#4ECDC4';
@@ -82,48 +82,48 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltip.style.opacity = '0';
     });
 
-    // Add event listeners for game controls
-    document.addEventListener('keydown', (event) => {
-        game.handleKeyPress(event);
-    });
-
+    // Removed handleKeyPress from here to avoid duplication
     document.getElementById('gameBoard').addEventListener('click', (event) => {
         game.handleCellClick(event);
     });
 
     // Optional: Add buttons for additional game functions
-    const hintButton = document.createElement('button');
-    hintButton.textContent = 'Hint';
-    hintButton.addEventListener('click', () => game.hint());
-    document.getElementById('gameContainer').appendChild(hintButton);
+    // Add buttons for additional game functions in a container
+const buttonContainer = document.createElement('div');
+buttonContainer.id = 'buttonContainer';
+document.getElementById('gameContainer').appendChild(buttonContainer);
 
-    const undoButton = document.createElement('button');
-    undoButton.textContent = 'Undo';
-    undoButton.addEventListener('click', () => game.undo());
-    document.getElementById('gameContainer').appendChild(undoButton);
+const hintButton = document.createElement('button');
+hintButton.textContent = 'Hint';
+hintButton.addEventListener('click', () => game.hint());
+buttonContainer.appendChild(hintButton);
 
-    const resetButton = document.createElement('button');
-    resetButton.textContent = 'Reset Game';
-    resetButton.addEventListener('click', () => {
-        if (confirm('Are you sure you want to reset the game?')) {
-            game.resetGame();
-        }
-    });
-    document.getElementById('gameContainer').appendChild(resetButton);
+const undoButton = document.createElement('button');
+undoButton.textContent = 'Undo';
+undoButton.addEventListener('click', () => game.undo());
+buttonContainer.appendChild(undoButton);
 
-    // Optional: Add a button to toggle conflict highlighting
-    let conflictsHighlighted = false;
-    const toggleConflictsButton = document.createElement('button');
-    toggleConflictsButton.textContent = 'Show Conflicts';
-    toggleConflictsButton.addEventListener('click', () => {
-        if (conflictsHighlighted) {
-            game.removeHighlights();
-            toggleConflictsButton.textContent = 'Show Conflicts';
-        } else {
-            game.highlightConflicts();
-            toggleConflictsButton.textContent = 'Hide Conflicts';
-        }
-        conflictsHighlighted = !conflictsHighlighted;
-    });
-    document.getElementById('gameContainer').appendChild(toggleConflictsButton);
+const resetButton = document.createElement('button');
+resetButton.textContent = 'Reset Game';
+resetButton.addEventListener('click', () => {
+    if (confirm('Are you sure you want to reset the game?')) {
+        game.resetGame();
+    }
+});
+buttonContainer.appendChild(resetButton);
+
+let conflictsHighlighted = false;
+const toggleConflictsButton = document.createElement('button');
+toggleConflictsButton.textContent = 'Show Conflicts';
+toggleConflictsButton.addEventListener('click', () => {
+    if (conflictsHighlighted) {
+        game.removeHighlights();
+        toggleConflictsButton.textContent = 'Show Conflicts';
+    } else {
+        game.highlightConflicts();
+        toggleConflictsButton.textContent = 'Hide Conflicts';
+    }
+    conflictsHighlighted = !conflictsHighlighted;
+});
+buttonContainer.appendChild(toggleConflictsButton);
 });
