@@ -1,5 +1,3 @@
-import Peer from 'peerjs';
-
 export class Network {
     constructor(game) {
         this.game = game;
@@ -46,6 +44,7 @@ export class Network {
             }
         });
     }
+
     retryConnection() {
         console.log('Retrying connection...');
         setTimeout(() => {
