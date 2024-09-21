@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (peerId) {
             network.connect(peerId);
         }
-    });
+    }); 
 
     peerIdInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
