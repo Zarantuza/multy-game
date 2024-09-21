@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/multy-game/', // Replace 'speedoku' with your repository name
+  base: '/multy-game/',
   server: {
     port: 3000
   },

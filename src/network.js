@@ -46,7 +46,6 @@ export class Network {
             }
         });
     }
-
     retryConnection() {
         console.log('Retrying connection...');
         setTimeout(() => {
