@@ -10,37 +10,45 @@ export class Network {
     }
 
     initializePeer() {
-        const peerOptions = {
-            host: 'peerjs.thecatworld.us', // Your CORS-enabled PeerJS server
-            secure: true,
-            port: 443,
-            config: {
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
-                ]
-            },
-            debug: 3,
-        };
-
-        this.peer = new Peer(undefined, peerOptions);
-
+        console.log('Initializing peer connection...');
+        
+        // Use default PeerJS cloud server
+        this.peer = new Peer(undefined, {
+            debug: 2 // Set debug level (0-3)
+        });
+    
         this.peer.on('open', (id) => {
-            console.log('My peer ID is: ' + id);
+            console.log('Peer connection opened. My peer ID is: ' + id);
             document.getElementById('myPeerIdDisplay').textContent = `My Peer ID: ${id}`;
             this.id = id;
             this.game.setNetworkId(id);
         });
-
+    
         this.peer.on('connection', (conn) => {
+            console.log('Incoming connection from peer: ' + conn.peer);
             this.handleConnection(conn);
         });
-
+    
+        this.peer.on('disconnected', () => {
+            console.log('Peer disconnected. Attempting to reconnect...');
+            this.peer.reconnect();
+        });
+    
+        this.peer.on('close', () => {
+            console.log('Peer connection closed. Cleaning up...');
+            this.connections.clear();
+            this.game.removeAllPlayers();
+        });
+    
         this.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
             this.handleNetworkError(err);
             if (err.type === 'network' || err.type === 'server-error') {
+                console.log('Network or server error. Retrying connection...');
                 this.retryConnection();
+            } else if (err.type === 'browser-incompatible') {
+                console.error('Your browser is not compatible with PeerJS');
+                alert('Your browser is not compatible with PeerJS. Please try a different browser.');
             }
         });
     }

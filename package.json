@@ -6,7 +6,7 @@
   "scripts": { 
     "dev": "vite",
     "build": "vite build",
-    "deploy": "vite build && cp -r dist/* . && rm -rf dist && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages"
+    "deploy": "vite build && powershell -Command \"Copy-Item dist/* . -Recurse -Force; Remove-Item dist -Recurse -Force; New-Item -ItemType File -Path .nojekyll -Force\" && git add . && git commit -m \"Deploy to GitHub Pages\" && git push origin gh-pages"
   },
   "devDependencies": {
     "vite": "^4.3.9"
