@@ -1,6 +1,7 @@
 import { Game } from './game.js';
 import { Network } from './network.js';
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
     const network = new Network(game);

@@ -4,11 +4,11 @@ export class Network {
     constructor(game) {
         this.game = game;
         this.peer = new Peer(undefined, {
-            host: 'localhost',
-            port: 9000,
-            path: '/myapp',
-            debug: 3,
-        });
+        host: 'peerjs-server.herokuapp.com',
+        secure: true,
+        port: 443,
+        debug: 3,
+    });
         this.connections = new Map();
         this.isHost = true; // Assume we're the host initially
 

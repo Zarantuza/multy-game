@@ -2,11 +2,11 @@
   "name": "sudoku-multiplayer",
   "version": "1.0.0",
   "type": "module",
+  "homepage": "https://zarantuzar.github.io/multy-game/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "server": "node server.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "peer": "^0.6.1",
