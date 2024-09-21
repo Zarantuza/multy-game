@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speedoku</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Luckiest+Guy&family=Nunito:wght@400;700&display=swap');
+    
+        body {
+            font-family: 'Nunito', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M0 0h80v80H0V0zm20 20v40h40V20H20zm20 35a15 15 0 1 1 0-30 15 15 0 0 1 0 30z' /%3E%3C/g%3E%3C/svg%3E");
+        }
+    
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.2);
+            padding: 25px;
+            max-width: 625px;
+            width: 100%;
+        }
+    
+        h1 {
+            font-family: 'Luckiest Guy', cursive;
+            color: #FF6B6B;
+            font-size: 3.5em;
+            margin: 0 0 25px 0;
+            text-shadow: 3px 3px 0px #4ECDC4;
+        }
+    
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 1px;
+            background-color: #333;
+            padding: 2px;
+            border: 3px solid #333;
+            margin-bottom: 25px;
+            max-width: 562px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+    
+        .cell {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            border: 1px solid #ccc;
+        }
+    
+        .cell:nth-child(3n) {
+            border-right: 2px solid #333;
+        }
+    
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 2px solid #333;
+        }
+    
+        .cell:nth-child(9n) {
+            border-right: 2px solid #333;
+        }
+    
+        .cell:nth-child(n+73):nth-child(-n+81) {
+            border-bottom: 2px solid #333;
+        }
+    
+        .cell.fixed {
+            font-weight: bold;
+            background-color: #f0f0f0;
+            color: #45b7a4;
+        }
+    
+        .cell.selected {
+            background-color: #FFD93D;
+            transform: scale(1.05);
+        }
+    
+        .player-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    
+        #gameInfo {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+    
+        #players {
+            display: flex;
+            gap: 25px;
+        }
+    
+        .player {
+            font-family: 'Fredoka One', cursive;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        #chronometer {
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8em;
+            color: #FF6B6B;
+        }
+    
+        #connectionUI {
+            margin-top: 25px;
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+    
+        #peerIdInput {
+            padding: 10px;
+            font-size: 16px;
+            flex-grow: 1;
+            border: 2px solid #4ECDC4;
+            border-radius: 10px;
+        }
+    
+        #connectButton {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            font-family: 'Fredoka One', cursive;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        #connectButton:hover {
+            background-color: #ff8e8e;
+            transform: translateY(-2px);
+        }
+    
+        #myPeerIdDisplay {
+            margin-top: 12px;
+            font-style: italic;
+            word-break: break-all;
+            font-size: 16px;
+            color: #666;
+        }
+    
+        .score-change {
+            position: absolute;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 1.8em;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+        }
+    
+        .score-change.show {
+            opacity: 1;
+            transform: translateY(-30px) scale(1.2);
+        }
+    
+        .score-change.positive {
+            color: #4ECDC4;
+        }
+    
+        .score-change.negative {
+            color: #FF6B6B;
+        }
+        #peerIdContainer {
+            display: flex;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        #myPeerIdDisplay {
+            flex-grow: 1;
+            font-style: italic;
+            word-break: break-all;
+            font-size: 16px;
+            color: #666;
+            margin-right: 10px;
+        }
+
+        #copyPeerIdButton {
+            padding: 5px 10px;
+            cursor: pointer;
+            background-color: #4ECDC4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-family: 'Fredoka One', cursive;
+        }
+
+        #copyPeerIdButton:hover {
+            background-color: #45b7a4;
+            transform: translateY(-2px);
+        }
+
+        .info-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    background-color: #007bff;
+    color: rgb(255, 255, 255);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.tooltip {
+    display: none;
+    position: absolute;
+    top: 30px;
+    right: 0;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    width: 250px;
+}
+
+.tooltip.show {
+    display: block;
+}
+
+.tooltip h3 {
+    margin-top: 0;
+    color: #007bff;
+}
+
+.tooltip ul {
+    padding-left: 20px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.tooltip p {
+    margin: 5px 0;
+    color: #333;
+}
+
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>Speedoku</h1>
+        <div id="gameInfo">
+            <div id="players"></div>
+            <div id="chronometer">00:00</div>
+        </div>
+        <div id="gameBoard"></div>
+        <div id="connectionUI">
+            <input type="text" id="peerIdInput" placeholder="Enter Peer ID">
+            <button id="connectButton">Connect</button>
+        </div>
+        <div id="peerIdContainer">
+            <div id="myPeerIdDisplay"></div>
+            <button id="copyPeerIdButton">Copy ID</button>
+        </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
