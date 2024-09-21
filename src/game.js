@@ -159,6 +159,11 @@ export class Game {
                     this.setNumber(parseInt(key));
                 }
         }
+    
+        // Prevent default behavior for arrow keys and other game-related keys
+        if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'z', 'q', 'w', 's', 'a', 'd', 'enter', 'backspace', 'delete'].includes(key) || (key >= '1' && key <= '9')) {
+            event.preventDefault();
+        }
     }
 
     handleCellClick(event) {
@@ -174,9 +179,13 @@ export class Game {
     moveSelection(dx, dy) {
         const newRow = Math.max(0, Math.min(8, this.selectedCell.row + dy));
         const newCol = Math.max(0, Math.min(8, this.selectedCell.col + dx));
-        this.selectedCell = { row: newRow, col: newCol };
-        this.updateSelectedCell();
-        this.network.broadcastPosition(this.selectedCell);
+        
+        // Only update if the position has actually changed
+        if (newRow !== this.selectedCell.row || newCol !== this.selectedCell.col) {
+            this.selectedCell = { row: newRow, col: newCol };
+            this.updateSelectedCell();
+            this.network.broadcastPosition(this.selectedCell);
+        }
     }
 
     updateSelectedCell() {
