@@ -6,7 +6,7 @@
   "scripts": { 
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "deploy": "vite build && powershell -Command \"New-Item -ItemType File -Path .nojekyll -Force\""
   },
   "dependencies": {
     "simple-peer": "^9.11.1"
