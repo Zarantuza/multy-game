@@ -4,12 +4,9 @@
   "type": "module",
   "homepage": "https://zarantuza.github.io/multy-game/",
   "scripts": { 
-   "dev": "vite",
+    "dev": "vite",
     "build": "vite build",
-    "deploy": "vite build && powershell -Command \"Copy-Item dist/* . -Recurse -Force; Remove-Item dist -Recurse -Force; New-Item -ItemType File -Path .nojekyll -Force\""
-  },
-  "dependencies": {
-    "simple-peer": "^9.11.1"
+    "deploy": "vite build && cp -r dist/* . && rm -rf dist && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages"
   },
   "devDependencies": {
     "vite": "^4.3.9"
