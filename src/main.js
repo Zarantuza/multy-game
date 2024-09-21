@@ -12,13 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // UI Interaction
     const peerIdInput = document.getElementById('peerIdInput');
     const connectButton = document.getElementById('connectButton');
-    const copyPeerIdButton = document.getElementById('copyPeerIdButton');
-    const myPeerIdDisplay = document.getElementById('myPeerIdDisplay');
+    const createGameButton = document.createElement('button');
+    createGameButton.textContent = 'Create Game';
+    document.getElementById('connectionUI').appendChild(createGameButton);
+    
+    createGameButton.addEventListener('click', () => {
+        network.createPeer(true);
+    });
+    
 
     connectButton.addEventListener('click', () => {
-        const peerId = peerIdInput.value.trim();
-        if (peerId) {
-            network.connect(peerId);
+        const signalData = peerIdInput.value.trim();
+        if (signalData) {
+            network.connect(signalData);
         }
     });
 

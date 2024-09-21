@@ -3,14 +3,29 @@ import Peer from 'peerjs';
 export class Network {
     constructor(game) {
         this.game = game;
-        this.peer = new Peer(undefined, {
-        host: 'peerjs-server.herokuapp.com',
-        secure: true,
-        port: 443,
-        debug: 3,
-    });
+        this.peer = null;
         this.connections = new Map();
         this.isHost = true; // Assume we're the host initially
+        this.id = null;
+
+        this.initializePeer();
+    }
+
+    initializePeer() {
+        const peerOptions = {
+            host: 'peerjs.thecatworld.us', // CORS-enabled PeerJS server
+            secure: true,
+            port: 443,
+            debug: 3,
+            config: {
+                'iceServers': [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
+                ]
+            }
+        };
+
+        this.peer = new Peer(undefined, peerOptions);
 
         this.peer.on('open', (id) => {
             console.log('My peer ID is: ' + id);
@@ -26,7 +41,17 @@ export class Network {
         this.peer.on('error', (err) => {
             console.error('PeerJS error:', err);
             this.handleNetworkError(err);
+            if (err.type === 'network' || err.type === 'server-error') {
+                this.retryConnection();
+            }
         });
+    }
+
+    retryConnection() {
+        console.log('Retrying connection...');
+        setTimeout(() => {
+            this.initializePeer();
+        }, 5000); // Retry after 5 seconds
     }
 
     connect(peerId) {
@@ -79,6 +104,11 @@ export class Network {
             this.connections.delete(conn.peer);
             this.game.removePlayer(conn.peer);
             this.updateConnectionStatus();
+        });
+
+        conn.on('error', (err) => {
+            console.error('Connection error:', err);
+            this.handleNetworkError(err);
         });
     }
 
