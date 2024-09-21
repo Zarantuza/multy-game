@@ -245,40 +245,62 @@ export class Game {
             console.error("No local player set");
             return;
         }
-
+    
         // Check if the cell is already solved
         if (this.board[row][col] !== 0) {
             console.log("This cell is already solved");
             return;
         }
-
+    
         const difficultyScore = this.calculateDifficultyScore(row, col);
         const points = this.calculatePoints(difficultyScore);
-
+    
         if (this.solution[row][col] === value) {
+            // Correct answer: Add points
             this.localPlayer.addPoints(points);
             this.board[row][col] = value;
             this.cellColors[row][col] = this.localPlayer.color;
-
+    
             if (!this.localPlayer.solvedCells) {
                 this.localPlayer.solvedCells = [];
             }
             this.localPlayer.solvedCells.push({ row, col });
-
-            this.network.broadcastMove({ row, col, value, playerId: this.localPlayer.id, points });
+    
+            // Broadcast the move and the updated player points for correct answer
+            this.network.broadcastMove({
+                row,
+                col,
+                value,
+                playerId: this.localPlayer.id,
+                points: this.localPlayer.getScore() // Send the updated score
+            });
+    
             this.animateCell(row, col, 'correct');
             this.showScoreChange(points);
-            this.renderBoard(); // Re-render the board to update colors
         } else {
+            // Incorrect answer: Deduct points (apply penalty)
             const penalty = Math.max(1, Math.floor(points / 2)); // Penalty is half the potential points, minimum 1
             this.localPlayer.addPoints(-penalty);
+            
+            // Broadcast the incorrect move and the updated player points
+            this.network.broadcastMove({
+                row,
+                col,
+                value: null, // Indicate an incorrect answer
+                playerId: this.localPlayer.id,
+                points: this.localPlayer.getScore() // Send the updated score with penalty
+            });
+    
             this.animateCell(row, col, 'incorrect');
             this.showScoreChange(-penalty);
         }
-
-        this.updatePlayersDisplay();
-        this.checkGameEnd();
+    
+        this.updatePlayersDisplay(); // Update the UI to show the correct points
+        this.checkGameEnd(); // Check if the game is finished
     }
+    
+    
+    
 
     calculateDifficultyScore(row, col) {
         const R = this.countFilledInRow(row);
@@ -457,15 +479,19 @@ export class Game {
     }
 
     handleRemoteMove(id, move) {
-        // Check if the move is from the local player and ignore if true
         if (id === this.localPlayer.id) {
             console.log("Ignoring move from local player to prevent double processing.");
             return;
         }
     
         const player = this.players.get(id);
-        if (player && this.solution[move.row][move.col] === move.value) {
-            // Check if the cell is already solved
+        if (!player) {
+            console.error(`Player with id ${id} not found`);
+            return;
+        }
+    
+        if (move.value !== null && this.solution[move.row][move.col] === move.value) {
+            // Correct move: update board and player's score
             if (this.board[move.row][move.col] !== 0) {
                 console.log("This cell is already solved");
                 return;
@@ -484,13 +510,19 @@ export class Game {
             cell.style.color = player.color;
             cell.classList.remove('user-input');
             this.animateCell(move.row, move.col, 'correct');
-            player.addPoints(move.points);
-            this.renderBoard(); // Re-render the board to update colors
         }
     
-        this.updatePlayersDisplay();
-        this.checkGameEnd();
+        // Update the player's points with the received points, whether the move was correct or incorrect
+        player.addPoints(move.points - player.getScore()); // Update the player's points
+        
+        this.renderBoard(); // Re-render the board to update colors
+        this.updatePlayersDisplay(); // Update the UI to show the correct points
+        this.checkGameEnd(); // Check if the game has ended
     }
+    
+    
+    
+    
     
 
     updatePlayerPosition(id, position) {
