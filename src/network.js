@@ -13,16 +13,16 @@ export class Network {
 
     initializePeer() {
         const peerOptions = {
-            host: 'peerjs.thecatworld.us', // CORS-enabled PeerJS server
+            host: 'peerjs.thecatworld.us', // Your CORS-enabled PeerJS server
             secure: true,
             port: 443,
-            debug: 3,
             config: {
                 'iceServers': [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
                 ]
-            }
+            },
+            debug: 3,
         };
 
         this.peer = new Peer(undefined, peerOptions);

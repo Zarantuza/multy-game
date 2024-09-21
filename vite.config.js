@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      external: ['peerjs']
     },
   },
   server: {

@@ -1,195 +1,129 @@
-import Peer from 'peerjs';
+import { Game } from './game.js';
+import { Network } from './network.js';
 
-export class Network {
-    constructor(game) {
-        this.game = game;
-        this.peer = null;
-        this.connections = new Map();
-        this.isHost = true; // Assume we're the host initially
-        this.id = null;
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new Game();
+    const network = new Network(game);
+    game.setNetwork(network);
 
-        this.initializePeer();
-    }
+    game.init();
 
-    initializePeer() {
-        const peerOptions = {
-            host: 'peerjs-server.herokuapp.com', // Original server with CORS issue
-            secure: true,
-            port: 443,
-            path: '/peerjs',
-            config: {
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'turn:numb.viagenie.ca', credential: 'muazkh', username: 'webrtc@live.com' }
-                ]
-            },
-            debug: 3,
-        };
+    // UI Interaction
+    const peerIdInput = document.getElementById('peerIdInput');
+    const connectButton = document.getElementById('connectButton');
+    const copyPeerIdButton = document.getElementById('copyPeerIdButton');
+    const myPeerIdDisplay = document.getElementById('myPeerIdDisplay');
 
-        // Set up PeerJS client with `no-cors` mode on the fetch request
-        fetch('https://peerjs-server.herokuapp.com/peerjs/id', { mode: 'no-cors' })
-            .then(() => {
-                this.peer = new Peer(undefined, peerOptions);
-                this.peer.on('open', (id) => {
-                    console.log('My peer ID is: ' + id);
-                    document.getElementById('myPeerIdDisplay').textContent = `My Peer ID: ${id}`;
-                    this.id = id;
-                    this.game.setNetworkId(id);
-                });
-
-                this.peer.on('connection', (conn) => {
-                    this.handleConnection(conn);
-                });
-
-                this.peer.on('error', (err) => {
-                    console.error('PeerJS error:', err);
-                    this.handleNetworkError(err);
-                    if (err.type === 'network' || err.type === 'server-error') {
-                        this.retryConnection();
-                    }
-                });
-            })
-            .catch((error) => {
-                console.error('Error fetching PeerJS server with no-cors:', error);
-            });
-    }
-
-    retryConnection() {
-        console.log('Retrying connection...');
-        setTimeout(() => {
-            this.initializePeer();
-        }, 5000); // Retry after 5 seconds
-    }
-
-    connect(peerId) {
-        if (!this.connections.has(peerId)) {
-            const conn = this.peer.connect(peerId);
-            this.isHost = false; // We're connecting to someone, so we're not the host
-            this.handleConnection(conn);
+    connectButton.addEventListener('click', () => {
+        const peerId = peerIdInput.value.trim();
+        if (peerId) {
+            network.connect(peerId);
         }
-    }
+    });
 
-    handleConnection(conn) {
-        conn.on('open', () => {
-            console.log('Connected to: ' + conn.peer);
-            this.connections.set(conn.peer, conn);
-            this.game.addRemotePlayer(conn.peer);
+    peerIdInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            connectButton.click();
+        }
+    });
 
-            if (this.isHost) {
-                // If we're the host, send our game state to the new player
-                const gameState = this.game.getGameState();
-                conn.send({ type: 'initial_state', state: gameState });
-            }
-
-            conn.on('data', (data) => {
-                switch (data.type) {
-                    case 'move':
-                        this.game.handleRemoteMove(conn.peer, data.move);
-                        break;
-                    case 'position':
-                        this.game.updatePlayerPosition(conn.peer, data.position);
-                        break;
-                    case 'initial_state':
-                        if (!this.isHost) {
-                            // Only update our game state if we're not the host
-                            this.game.setGameState(data.state);
-                        }
-                        break;
-                    case 'direct_message':
-                        console.log(`Direct message from ${conn.peer}: ${data.message}`);
-                        break;
-                    default:
-                        console.warn('Unknown data type received:', data.type);
-                }
-            });
-
-            this.updateConnectionStatus();
+    copyPeerIdButton.addEventListener('click', () => {
+        const peerId = myPeerIdDisplay.textContent.replace('My Peer ID: ', '');
+        navigator.clipboard.writeText(peerId).then(() => {
+            // Visual feedback that the ID was copied
+            const originalText = copyPeerIdButton.textContent;
+            copyPeerIdButton.textContent = 'Copied!';
+            copyPeerIdButton.style.backgroundColor = '#45b7a4';
+            
+            setTimeout(() => {
+                copyPeerIdButton.textContent = originalText;
+                copyPeerIdButton.style.backgroundColor = '#4ECDC4';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
         });
+    });
 
-        conn.on('close', () => {
-            console.log('Disconnected from: ' + conn.peer);
-            this.connections.delete(conn.peer);
-            this.game.removePlayer(conn.peer);
-            this.updateConnectionStatus();
-        });
-
-        conn.on('error', (err) => {
-            console.error('Connection error:', err);
-            this.handleNetworkError(err);
-        });
-    }
-
-    broadcastMove(move) {
-        const data = { type: 'move', move: move };
-        this.broadcast(data);
-    }
-
-    broadcastPosition(position) {
-        const data = { type: 'position', position: position };
-        this.broadcast(data);
-    }
-
-    broadcast(data) {
-        for (let conn of this.connections.values()) {
-            conn.send(data);  // Broadcast data to all connected peers
+    // Optional: Add keyboard shortcut for copying Peer ID (Ctrl+C when focused on the Peer ID display)
+    myPeerIdDisplay.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.key === 'c') {
+            event.preventDefault(); // Prevent default copy behavior
+            copyPeerIdButton.click(); // Simulate click on copy button
         }
-    }
+    });
 
-    getMyId() {
-        return this.id;
-    }
+    // Make the Peer ID display focusable for keyboard accessibility
+    myPeerIdDisplay.tabIndex = 0;
 
-    getConnectedPeers() {
-        return Array.from(this.connections.keys());
-    }
+    // Optional: Add a tooltip to explain how to use the Peer ID
+    const tooltip = document.createElement('div');
+    tooltip.textContent = 'Share this ID with a friend to connect and play together!';
+    tooltip.style.cssText = `
+        position: absolute;
+        background-color: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    `;
+    document.body.appendChild(tooltip);
 
-    disconnect(peerId) {
-        const conn = this.connections.get(peerId);
-        if (conn) {
-            conn.close();
-            this.connections.delete(peerId);
-            this.game.removePlayer(peerId);
-            this.updateConnectionStatus();
+    myPeerIdDisplay.addEventListener('mouseenter', () => {
+        const rect = myPeerIdDisplay.getBoundingClientRect();
+        tooltip.style.left = `${rect.left}px`;
+        tooltip.style.top = `${rect.bottom + 5}px`;
+        tooltip.style.opacity = '1';
+    });
+
+    myPeerIdDisplay.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0';
+    });
+
+    // Add event listeners for game controls
+    document.addEventListener('keydown', (event) => {
+        game.handleKeyPress(event);
+    });
+
+    document.getElementById('gameBoard').addEventListener('click', (event) => {
+        game.handleCellClick(event);
+    });
+
+    // Optional: Add buttons for additional game functions
+    const hintButton = document.createElement('button');
+    hintButton.textContent = 'Hint';
+    hintButton.addEventListener('click', () => game.hint());
+    document.getElementById('gameContainer').appendChild(hintButton);
+
+    const undoButton = document.createElement('button');
+    undoButton.textContent = 'Undo';
+    undoButton.addEventListener('click', () => game.undo());
+    document.getElementById('gameContainer').appendChild(undoButton);
+
+    const resetButton = document.createElement('button');
+    resetButton.textContent = 'Reset Game';
+    resetButton.addEventListener('click', () => {
+        if (confirm('Are you sure you want to reset the game?')) {
+            game.resetGame();
         }
-    }
+    });
+    document.getElementById('gameContainer').appendChild(resetButton);
 
-    disconnectAll() {
-        for (let conn of this.connections.values()) {
-            conn.close();
-        }
-        this.connections.clear();
-        this.game.removeAllPlayers();
-        this.updateConnectionStatus();
-    }
-
-    reconnect(peerId) {
-        this.disconnect(peerId);
-        this.connect(peerId);
-    }
-
-    sendDirectMessage(peerId, message) {
-        const conn = this.connections.get(peerId);
-        if (conn) {
-            conn.send({ type: 'direct_message', message: message });
+    // Optional: Add a button to toggle conflict highlighting
+    let conflictsHighlighted = false;
+    const toggleConflictsButton = document.createElement('button');
+    toggleConflictsButton.textContent = 'Show Conflicts';
+    toggleConflictsButton.addEventListener('click', () => {
+        if (conflictsHighlighted) {
+            game.removeHighlights();
+            toggleConflictsButton.textContent = 'Show Conflicts';
         } else {
-            console.warn(`No connection found for peer ${peerId}`);
+            game.highlightConflicts();
+            toggleConflictsButton.textContent = 'Hide Conflicts';
         }
-    }
-
-    updateConnectionStatus() {
-        const statusElement = document.getElementById('connectionStatus');
-        if (statusElement) {
-            const connectedPeers = this.getConnectedPeers();
-            statusElement.textContent = `Connected to ${connectedPeers.length} peer(s): ${connectedPeers.join(', ')}`;
-        }
-    }
-
-    handleNetworkError(error) {
-        console.error('Network error:', error);
-        const errorElement = document.getElementById('networkError');
-        if (errorElement) {
-            errorElement.textContent = `Network error: ${error.type}`;
-            errorElement.style.display = 'block';
-        }
-    }
-}
+        conflictsHighlighted = !conflictsHighlighted;
+    });
+    document.getElementById('gameContainer').appendChild(toggleConflictsButton);
+});
